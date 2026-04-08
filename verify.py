@@ -1,12 +1,12 @@
 """
-verify.py — compare a WAV sample against an enrolled speaker profile.
+verify.py — compare an audio sample against an enrolled speaker profile.
 
 Usage:
-    python verify.py <speaker_name> <wav_path> [--threshold 0.85]
+    python verify.py <speaker_name> <audio_path> [--threshold 25.0]
 
 Example:
     python verify.py donald samples/raw/donald_3.wav
-    python verify.py donald samples/denoised/donald_3.wav --threshold 40.0
+    python verify.py donald samples/denoised/donald_3.flac --threshold 20.0
 
 Prints: score, ACCEPT/REJECT, and exits 0 on accept, 1 on reject.
 """
@@ -49,7 +49,7 @@ def verify(speaker: str, wav_path: str, threshold: float) -> tuple[float, bool]:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Verify a voice sample against a speaker profile.")
     parser.add_argument("speaker", help="Speaker name to verify against")
-    parser.add_argument("wav", help="WAV file to verify")
+    parser.add_argument("wav", help="WAV or FLAC file to verify")
     parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD,
                         help=f"Acceptance threshold (default: {DEFAULT_THRESHOLD})")
     args = parser.parse_args()

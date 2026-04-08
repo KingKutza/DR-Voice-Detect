@@ -1,11 +1,12 @@
 """
-enroll.py — build a voice profile from one or more WAV samples.
+enroll.py — build a voice profile from one or more audio samples.
 
 Usage:
-    python enroll.py <speaker_name> <wav1> [<wav2> ...]
+    python enroll.py <speaker_name> <file1> [<file2> ...]
 
 Example:
     python enroll.py donald samples/raw/donald_1.wav samples/raw/donald_2.wav
+    python enroll.py donald samples/raw/donald_1.flac samples/raw/donald_2.flac
 
 Saves: profiles/<speaker_name>.json
 """
@@ -43,6 +44,6 @@ def enroll(speaker: str, wav_paths: list[str]) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Enroll a speaker from WAV samples.")
     parser.add_argument("speaker", help="Speaker name (used as profile filename)")
-    parser.add_argument("wavs", nargs="+", help="One or more WAV files to enroll from")
+    parser.add_argument("wavs", nargs="+", help="One or more WAV or FLAC files to enroll from")
     args = parser.parse_args()
     enroll(args.speaker, args.wavs)

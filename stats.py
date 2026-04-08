@@ -2,15 +2,15 @@
 stats.py — compute FAR/FRR/PAR and generate graphs and spectrograms.
 
 Usage:
-    python stats.py <speaker_name> --genuine <wav1> [<wav2> ...] --impostor <wav1> [<wav2> ...]
-                    [--threshold 0.85] [--denoised-genuine <wav1> ...] [--denoised-impostor <wav1> ...]
+    python stats.py <speaker_name> --genuine <file1> [<file2> ...] --impostor <file1> [<file2> ...]
+                    [--threshold 25.0] [--denoised-genuine <file1> ...] [--denoised-impostor <file1> ...]
 
 Example:
     python stats.py donald \\
         --genuine samples/raw/donald_3.wav samples/raw/donald_4.wav \\
         --impostor samples/raw/rhett_1.wav samples/raw/rhett_2.wav \\
-        --denoised-genuine samples/denoised/donald_3.wav samples/denoised/donald_4.wav \\
-        --denoised-impostor samples/denoised/rhett_1.wav samples/denoised/rhett_2.wav
+        --denoised-genuine samples/denoised/donald_3.flac samples/denoised/donald_4.flac \\
+        --denoised-impostor samples/denoised/rhett_1.flac samples/denoised/rhett_2.flac
 
 Saves graphs and spectrograms to results/.
 """
@@ -157,10 +157,10 @@ def run(args) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compute FAR/FRR/PAR and generate graphs.")
     parser.add_argument("speaker", help="Enrolled speaker name to test against")
-    parser.add_argument("--genuine", nargs="+", required=True, help="WAV files from the genuine speaker")
-    parser.add_argument("--impostor", nargs="+", required=True, help="WAV files from impostor speakers")
+    parser.add_argument("--genuine", nargs="+", required=True, help="WAV or FLAC files from the genuine speaker")
+    parser.add_argument("--impostor", nargs="+", required=True, help="WAV or FLAC files from impostor speakers")
     parser.add_argument("--threshold", type=float, default=25.0, help="Euclidean distance threshold — accept if score <= threshold (default: 50.0, tune as needed)")
-    parser.add_argument("--denoised-genuine", nargs="+", dest="denoised_genuine", help="Denoised genuine WAVs")
-    parser.add_argument("--denoised-impostor", nargs="+", dest="denoised_impostor", help="Denoised impostor WAVs")
+    parser.add_argument("--denoised-genuine", nargs="+", dest="denoised_genuine", help="Denoised genuine WAV or FLAC files")
+    parser.add_argument("--denoised-impostor", nargs="+", dest="denoised_impostor", help="Denoised impostor WAV or FLAC files")
     args = parser.parse_args()
     run(args)
