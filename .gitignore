@@ -1,1 +1,16 @@
 CLAUDE.md
+
+# Virtual environment
+.venv/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Data and output (not tracked)
+samples/
+profiles/
+results/
