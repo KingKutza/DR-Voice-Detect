@@ -20,7 +20,7 @@ import librosa
 PROFILES_DIR = "profiles"
 N_MFCC = 13
 SAMPLE_RATE = 16000
-DEFAULT_THRESHOLD = 100.0  # euclidean distance — lower = more similar, tune as needed
+DEFAULT_THRESHOLD = 25.0  # euclidean distance — lower = more similar, tune as needed
 
 
 def extract_features(wav_path: str) -> np.ndarray:

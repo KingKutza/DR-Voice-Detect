@@ -159,7 +159,7 @@ if __name__ == "__main__":
     parser.add_argument("speaker", help="Enrolled speaker name to test against")
     parser.add_argument("--genuine", nargs="+", required=True, help="WAV files from the genuine speaker")
     parser.add_argument("--impostor", nargs="+", required=True, help="WAV files from impostor speakers")
-    parser.add_argument("--threshold", type=float, default=100.0, help="Euclidean distance threshold — accept if score <= threshold (default: 50.0, tune as needed)")
+    parser.add_argument("--threshold", type=float, default=25.0, help="Euclidean distance threshold — accept if score <= threshold (default: 50.0, tune as needed)")
     parser.add_argument("--denoised-genuine", nargs="+", dest="denoised_genuine", help="Denoised genuine WAVs")
     parser.add_argument("--denoised-impostor", nargs="+", dest="denoised_impostor", help="Denoised impostor WAVs")
     args = parser.parse_args()
