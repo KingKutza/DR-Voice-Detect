@@ -20,13 +20,14 @@ import librosa
 PROFILES_DIR = "profiles"
 N_MFCC = 13
 SAMPLE_RATE = 16000
-DEFAULT_THRESHOLD = 50.0  # euclidean distance — lower = more similar, tune as needed
+DEFAULT_THRESHOLD = 100.0  # euclidean distance — lower = more similar, tune as needed
 
 
-def extract_mfcc(wav_path: str) -> np.ndarray:
+def extract_features(wav_path: str) -> np.ndarray:
     audio, _ = librosa.load(wav_path, sr=SAMPLE_RATE, mono=True)
     mfcc = librosa.feature.mfcc(y=audio, sr=SAMPLE_RATE, n_mfcc=N_MFCC)
-    return np.mean(mfcc, axis=1)
+    delta = librosa.feature.delta(mfcc)
+    return np.concatenate([np.mean(mfcc, axis=1), np.std(mfcc, axis=1), np.mean(delta, axis=1)])
 
 
 def euclidean_distance(a: np.ndarray, b: np.ndarray) -> float:
@@ -39,7 +40,7 @@ def verify(speaker: str, wav_path: str, threshold: float) -> tuple[float, bool]:
         profile = json.load(f)
 
     centroid = np.array(profile["centroid"])
-    sample_vec = extract_mfcc(wav_path)
+    sample_vec = extract_features(wav_path)
     score = euclidean_distance(sample_vec, centroid)
     accepted = score <= threshold  # lower distance = closer match
     return score, accepted

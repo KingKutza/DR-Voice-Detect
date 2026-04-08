@@ -21,14 +21,15 @@ N_MFCC = 13
 SAMPLE_RATE = 16000
 
 
-def extract_mfcc(wav_path: str) -> np.ndarray:
+def extract_features(wav_path: str) -> np.ndarray:
     audio, _ = librosa.load(wav_path, sr=SAMPLE_RATE, mono=True)
     mfcc = librosa.feature.mfcc(y=audio, sr=SAMPLE_RATE, n_mfcc=N_MFCC)
-    return np.mean(mfcc, axis=1)  # shape: (N_MFCC,)
+    delta = librosa.feature.delta(mfcc)
+    return np.concatenate([np.mean(mfcc, axis=1), np.std(mfcc, axis=1), np.mean(delta, axis=1)])
 
 
 def enroll(speaker: str, wav_paths: list[str]) -> None:
-    vectors = [extract_mfcc(p) for p in wav_paths]
+    vectors = [extract_features(p) for p in wav_paths]
     centroid = np.mean(vectors, axis=0).tolist()
 
     os.makedirs(PROFILES_DIR, exist_ok=True)

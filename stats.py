@@ -29,10 +29,11 @@ N_MFCC = 13
 SAMPLE_RATE = 16000
 
 
-def extract_mfcc(wav_path: str) -> np.ndarray:
+def extract_features(wav_path: str) -> np.ndarray:
     audio, _ = librosa.load(wav_path, sr=SAMPLE_RATE, mono=True)
     mfcc = librosa.feature.mfcc(y=audio, sr=SAMPLE_RATE, n_mfcc=N_MFCC)
-    return np.mean(mfcc, axis=1)
+    delta = librosa.feature.delta(mfcc)
+    return np.concatenate([np.mean(mfcc, axis=1), np.std(mfcc, axis=1), np.mean(delta, axis=1)])
 
 
 def euclidean_distance(a: np.ndarray, b: np.ndarray) -> float:
@@ -40,7 +41,7 @@ def euclidean_distance(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def score_samples(centroid: np.ndarray, wav_paths: list[str]) -> list[float]:
-    return [euclidean_distance(extract_mfcc(p), centroid) for p in wav_paths]
+    return [euclidean_distance(extract_features(p), centroid) for p in wav_paths]
 
 
 def compute_metrics(genuine_scores: list[float], impostor_scores: list[float], threshold: float) -> dict:
@@ -158,7 +159,7 @@ if __name__ == "__main__":
     parser.add_argument("speaker", help="Enrolled speaker name to test against")
     parser.add_argument("--genuine", nargs="+", required=True, help="WAV files from the genuine speaker")
     parser.add_argument("--impostor", nargs="+", required=True, help="WAV files from impostor speakers")
-    parser.add_argument("--threshold", type=float, default=50.0, help="Euclidean distance threshold — accept if score <= threshold (default: 50.0, tune as needed)")
+    parser.add_argument("--threshold", type=float, default=100.0, help="Euclidean distance threshold — accept if score <= threshold (default: 50.0, tune as needed)")
     parser.add_argument("--denoised-genuine", nargs="+", dest="denoised_genuine", help="Denoised genuine WAVs")
     parser.add_argument("--denoised-impostor", nargs="+", dest="denoised_impostor", help="Denoised impostor WAVs")
     args = parser.parse_args()
