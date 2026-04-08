@@ -35,17 +35,17 @@ def extract_mfcc(wav_path: str) -> np.ndarray:
     return np.mean(mfcc, axis=1)
 
 
-def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
-    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+def euclidean_distance(a: np.ndarray, b: np.ndarray) -> float:
+    return float(np.linalg.norm(a - b))
 
 
 def score_samples(centroid: np.ndarray, wav_paths: list[str]) -> list[float]:
-    return [cosine_similarity(extract_mfcc(p), centroid) for p in wav_paths]
+    return [euclidean_distance(extract_mfcc(p), centroid) for p in wav_paths]
 
 
 def compute_metrics(genuine_scores: list[float], impostor_scores: list[float], threshold: float) -> dict:
-    fa = sum(s >= threshold for s in impostor_scores)
-    fr = sum(s < threshold for s in genuine_scores)
+    fa = sum(s <= threshold for s in impostor_scores)  # impostor close enough to fool system
+    fr = sum(s > threshold for s in genuine_scores)    # genuine too far from centroid
     far = fa / len(impostor_scores) if impostor_scores else 0.0
     frr = fr / len(genuine_scores) if genuine_scores else 0.0
     par = (far + frr) / 2
@@ -60,7 +60,7 @@ def plot_score_distribution(genuine: list[float], impostor: list[float],
     ax.hist(genuine, bins=10, alpha=0.6, label="Genuine", color="steelblue")
     ax.hist(impostor, bins=10, alpha=0.6, label="Impostor", color="tomato")
     ax.axvline(threshold, color="black", linestyle="--", label=f"Threshold={threshold}")
-    ax.set_xlabel("Cosine Similarity Score")
+    ax.set_xlabel("Euclidean Distance (lower = closer match)")
     ax.set_ylabel("Count")
     ax.set_title(title)
     ax.legend()
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument("speaker", help="Enrolled speaker name to test against")
     parser.add_argument("--genuine", nargs="+", required=True, help="WAV files from the genuine speaker")
     parser.add_argument("--impostor", nargs="+", required=True, help="WAV files from impostor speakers")
-    parser.add_argument("--threshold", type=float, default=0.85, help="Acceptance threshold (default: 0.85)")
+    parser.add_argument("--threshold", type=float, default=50.0, help="Euclidean distance threshold — accept if score <= threshold (default: 50.0, tune as needed)")
     parser.add_argument("--denoised-genuine", nargs="+", dest="denoised_genuine", help="Denoised genuine WAVs")
     parser.add_argument("--denoised-impostor", nargs="+", dest="denoised_impostor", help="Denoised impostor WAVs")
     args = parser.parse_args()

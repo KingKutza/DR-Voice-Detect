@@ -6,7 +6,7 @@ Usage:
 
 Example:
     python verify.py donald samples/raw/donald_3.wav
-    python verify.py donald samples/denoised/donald_3.wav --threshold 0.80
+    python verify.py donald samples/denoised/donald_3.wav --threshold 40.0
 
 Prints: score, ACCEPT/REJECT, and exits 0 on accept, 1 on reject.
 """
@@ -20,7 +20,7 @@ import librosa
 PROFILES_DIR = "profiles"
 N_MFCC = 13
 SAMPLE_RATE = 16000
-DEFAULT_THRESHOLD = 0.85
+DEFAULT_THRESHOLD = 50.0  # euclidean distance — lower = more similar, tune as needed
 
 
 def extract_mfcc(wav_path: str) -> np.ndarray:
@@ -29,8 +29,8 @@ def extract_mfcc(wav_path: str) -> np.ndarray:
     return np.mean(mfcc, axis=1)
 
 
-def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
-    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+def euclidean_distance(a: np.ndarray, b: np.ndarray) -> float:
+    return float(np.linalg.norm(a - b))
 
 
 def verify(speaker: str, wav_path: str, threshold: float) -> tuple[float, bool]:
@@ -40,8 +40,8 @@ def verify(speaker: str, wav_path: str, threshold: float) -> tuple[float, bool]:
 
     centroid = np.array(profile["centroid"])
     sample_vec = extract_mfcc(wav_path)
-    score = cosine_similarity(sample_vec, centroid)
-    accepted = score >= threshold
+    score = euclidean_distance(sample_vec, centroid)
+    accepted = score <= threshold  # lower distance = closer match
     return score, accepted
 
 
