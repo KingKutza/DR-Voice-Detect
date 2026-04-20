@@ -52,8 +52,6 @@ def expand_paths(paths: list[str]) -> list[str]:
             expanded.extend(glob.glob(pattern, recursive=True))
             pattern = os.path.join(path, "**", "*.[fF][lL][aA][cC]")
             expanded.extend(glob.glob(pattern, recursive=True))
-            pattern = os.path.join(path, "**", "*.[mM]4[aA]")
-            expanded.extend(glob.glob(pattern, recursive=True))
         elif os.path.isfile(path):
             expanded.append(path)
     return sorted(set(expanded))  # Remove duplicates, sort for consistency
