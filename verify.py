@@ -1,18 +1,21 @@
 """
-verify.py — compare an audio sample against an enrolled speaker profile.
+verify.py — compare one or more audio samples against an enrolled speaker profile.
 
 Usage:
-    python verify.py <speaker_name> <audio_path> [--threshold 25.0]
+    python verify.py <speaker_name> <file1|dir1> [<file2|dir2> ...] [--threshold 25.0]
 
 Example:
     python verify.py donald samples/raw/donald_3.wav
-    python verify.py donald samples/denoised/donald_3.flac --threshold 20.0
+    python verify.py donald samples/denoised/ --threshold 20.0
+    python verify.py donald samples/raw/ samples/denoised/
 
-Prints: score, ACCEPT/REJECT, and exits 0 on accept, 1 on reject.
+Prints: score, ACCEPT/REJECT per file. Exits 0 if all accepted, 1 if any rejected.
 """
 
 import argparse
+import glob
 import json
+import os
 import sys
 import numpy as np
 import librosa
@@ -28,6 +31,19 @@ def extract_features(wav_path: str) -> np.ndarray:
     mfcc = librosa.feature.mfcc(y=audio, sr=SAMPLE_RATE, n_mfcc=N_MFCC)
     delta = librosa.feature.delta(mfcc)
     return np.concatenate([np.mean(mfcc, axis=1), np.std(mfcc, axis=1), np.mean(delta, axis=1)])
+
+
+def expand_paths(paths: list[str]) -> list[str]:
+    expanded = []
+    for path in paths:
+        if os.path.isdir(path):
+            pattern = os.path.join(path, "**", "*.[wW][aA][vV]")
+            expanded.extend(glob.glob(pattern, recursive=True))
+            pattern = os.path.join(path, "**", "*.[fF][lL][aA][cC]")
+            expanded.extend(glob.glob(pattern, recursive=True))
+        elif os.path.isfile(path):
+            expanded.append(path)
+    return sorted(set(expanded))
 
 
 def euclidean_distance(a: np.ndarray, b: np.ndarray) -> float:
@@ -49,12 +65,21 @@ def verify(speaker: str, wav_path: str, threshold: float) -> tuple[float, bool]:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Verify a voice sample against a speaker profile.")
     parser.add_argument("speaker", help="Speaker name to verify against")
-    parser.add_argument("wav", help="WAV or FLAC file to verify")
+    parser.add_argument("wavs", nargs="+", help="WAV/FLAC files or directories to verify")
     parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD,
                         help=f"Acceptance threshold (default: {DEFAULT_THRESHOLD})")
     args = parser.parse_args()
 
-    score, accepted = verify(args.speaker, args.wav, args.threshold)
-    result = "ACCEPT" if accepted else "REJECT"
-    print(f"Speaker: {args.speaker} | Score: {score:.4f} | Threshold: {args.threshold} | {result}")
-    sys.exit(0 if accepted else 1)
+    wav_paths = expand_paths(args.wavs)
+    if not wav_paths:
+        parser.error("No audio files found in the provided paths")
+
+    all_accepted = True
+    for path in wav_paths:
+        score, accepted = verify(args.speaker, path, args.threshold)
+        result = "ACCEPT" if accepted else "REJECT"
+        print(f"Speaker: {args.speaker} | File: {path} | Score: {score:.4f} | Threshold: {args.threshold} | {result}")
+        if not accepted:
+            all_accepted = False
+
+    sys.exit(0 if all_accepted else 1)
