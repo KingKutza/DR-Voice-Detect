@@ -2,20 +2,34 @@
 stats.py — compute FAR/FRR/PAR and generate graphs and spectrograms.
 
 Usage:
-    python stats.py <speaker_name> --genuine <file1> [<file2> ...] --impostor <file1> [<file2> ...]
-                    [--threshold 25.0] [--denoised-genuine <file1> ...] [--denoised-impostor <file1> ...]
+    python stats.py <speaker_name> --genuine <file1|dir1> [<file2|dir2> ...] --impostor <file1|dir1> [<file2|dir2> ...]
+                    [--threshold 25.0] [--denoised-genuine <file1|dir1> ...] [--denoised-impostor <file1|dir1> ...]
 
 Example:
+    # Using individual files
     python stats.py donald \\
         --genuine samples/raw/donald_3.wav samples/raw/donald_4.wav \\
         --impostor samples/raw/rhett_1.wav samples/raw/rhett_2.wav \\
         --denoised-genuine samples/denoised/donald_3.flac samples/denoised/donald_4.flac \\
         --denoised-impostor samples/denoised/rhett_1.flac samples/denoised/rhett_2.flac
 
+    # Using directories (automatically finds all .wav and .flac files recursively)
+    python stats.py donald \\
+        --genuine samples/raw/ \\
+        --impostor samples/raw/other_speakers/ \\
+        --denoised-genuine samples/denoised/ \\
+        --denoised-impostor samples/denoised/other_speakers/
+
+    # Mixed usage (files and directories)
+    python stats.py donald \\
+        --genuine samples/raw/ file1.wav \\
+        --impostor other_dir/ file2.wav
+
 Saves graphs and spectrograms to results/.
 """
 
 import argparse
+import glob
 import json
 import os
 import numpy as np
@@ -27,6 +41,20 @@ PROFILES_DIR = "profiles"
 RESULTS_DIR = "results"
 N_MFCC = 13
 SAMPLE_RATE = 16000
+
+
+def expand_paths(paths: list[str]) -> list[str]:
+    """Expand directories to list of audio files (WAV/FLAC) they contain."""
+    expanded = []
+    for path in paths:
+        if os.path.isdir(path):
+            pattern = os.path.join(path, "**", "*.[wW][aA][vV]")
+            expanded.extend(glob.glob(pattern, recursive=True))
+            pattern = os.path.join(path, "**", "*.[fF][lL][aA][cC]")
+            expanded.extend(glob.glob(pattern, recursive=True))
+        elif os.path.isfile(path):
+            expanded.append(path)
+    return sorted(set(expanded))  # Remove duplicates, sort for consistency
 
 
 def extract_features(wav_path: str) -> np.ndarray:
@@ -109,7 +137,19 @@ def plot_spectrogram(wav_path: str, out_path: str, title: str) -> None:
 
 
 def run(args) -> None:
-    os.makedirs(RESULTS_DIR, exist_ok=True)
+    out_dir = args.output_dir if args.output_dir else RESULTS_DIR
+    os.makedirs(out_dir, exist_ok=True)
+
+    # Expand directories to file lists
+    genuine_files = expand_paths(args.genuine)
+    impostor_files = expand_paths(args.impostor)
+    denoised_genuine_files = expand_paths(args.denoised_genuine) if args.denoised_genuine else []
+    denoised_impostor_files = expand_paths(args.denoised_impostor) if args.denoised_impostor else []
+
+    if not genuine_files:
+        raise ValueError("No genuine audio files found in the provided paths")
+    if not impostor_files:
+        raise ValueError("No impostor audio files found in the provided paths")
 
     profile_path = f"{PROFILES_DIR}/{args.speaker}.json"
     with open(profile_path) as f:
@@ -117,8 +157,8 @@ def run(args) -> None:
     centroid = np.array(profile["centroid"])
 
     # --- Raw scores ---
-    raw_genuine = score_samples(centroid, args.genuine)
-    raw_impostor = score_samples(centroid, args.impostor)
+    raw_genuine = score_samples(centroid, genuine_files)
+    raw_impostor = score_samples(centroid, impostor_files)
     metrics_raw = compute_metrics(raw_genuine, raw_impostor, args.threshold)
 
     print("\n=== Raw Samples ===")
@@ -128,13 +168,13 @@ def run(args) -> None:
 
     plot_score_distribution(raw_genuine, raw_impostor, args.threshold,
                             "Score Distribution — Raw",
-                            f"{RESULTS_DIR}/scores_raw.png")
+                            f"{out_dir}/scores_raw.png")
 
     # --- Denoised scores (optional) ---
     metrics_den = None
-    if args.denoised_genuine and args.denoised_impostor:
-        den_genuine = score_samples(centroid, args.denoised_genuine)
-        den_impostor = score_samples(centroid, args.denoised_impostor)
+    if denoised_genuine_files and denoised_impostor_files:
+        den_genuine = score_samples(centroid, denoised_genuine_files)
+        den_impostor = score_samples(centroid, denoised_impostor_files)
         metrics_den = compute_metrics(den_genuine, den_impostor, args.threshold)
 
         print("\n=== Denoised Samples ===")
@@ -144,23 +184,24 @@ def run(args) -> None:
 
         plot_score_distribution(den_genuine, den_impostor, args.threshold,
                                 "Score Distribution — Denoised",
-                                f"{RESULTS_DIR}/scores_denoised.png")
+                                f"{out_dir}/scores_denoised.png")
 
         # Spectrograms for first genuine sample raw vs denoised
-        plot_spectrogram(args.genuine[0], f"{RESULTS_DIR}/spectrogram_raw.png", "Spectrogram — Raw")
-        plot_spectrogram(args.denoised_genuine[0], f"{RESULTS_DIR}/spectrogram_denoised.png", "Spectrogram — Denoised")
+        plot_spectrogram(genuine_files[0], f"{out_dir}/spectrogram_raw.png", "Spectrogram — Raw")
+        plot_spectrogram(denoised_genuine_files[0], f"{out_dir}/spectrogram_denoised.png", "Spectrogram — Denoised")
 
-    plot_far_frr_bar(metrics_raw, metrics_den, f"{RESULTS_DIR}/far_frr_par.png")
-    print(f"\nAll results saved to {RESULTS_DIR}/")
+    plot_far_frr_bar(metrics_raw, metrics_den, f"{out_dir}/far_frr_par.png")
+    print(f"\nAll results saved to {out_dir}/")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compute FAR/FRR/PAR and generate graphs.")
     parser.add_argument("speaker", help="Enrolled speaker name to test against")
-    parser.add_argument("--genuine", nargs="+", required=True, help="WAV or FLAC files from the genuine speaker")
-    parser.add_argument("--impostor", nargs="+", required=True, help="WAV or FLAC files from impostor speakers")
+    parser.add_argument("--genuine", nargs="+", required=True, help="WAV or FLAC files OR directories containing audio files from the genuine speaker")
+    parser.add_argument("--impostor", nargs="+", required=True, help="WAV or FLAC files OR directories containing audio files from impostor speakers")
     parser.add_argument("--threshold", type=float, default=25.0, help="Euclidean distance threshold — accept if score <= threshold (default: 50.0, tune as needed)")
-    parser.add_argument("--denoised-genuine", nargs="+", dest="denoised_genuine", help="Denoised genuine WAV or FLAC files")
-    parser.add_argument("--denoised-impostor", nargs="+", dest="denoised_impostor", help="Denoised impostor WAV or FLAC files")
+    parser.add_argument("--denoised-genuine", nargs="+", dest="denoised_genuine", help="Denoised genuine WAV/FLAC files OR directories")
+    parser.add_argument("--denoised-impostor", nargs="+", dest="denoised_impostor", help="Denoised impostor WAV/FLAC files OR directories")
+    parser.add_argument("--output-dir", dest="output_dir", default=None, help="Directory to save results (default: results/)")
     args = parser.parse_args()
     run(args)
