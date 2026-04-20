@@ -129,6 +129,7 @@ def plot_spectrogram(wav_path: str, out_path: str, title: str) -> None:
     fig, ax = plt.subplots(figsize=(8, 3))
     img = librosa.display.specshow(S_db, sr=sr, x_axis="time", y_axis="hz", ax=ax)
     fig.colorbar(img, ax=ax, format="%+2.0f dB")
+    ax.set_ylim(0, 4000)
     ax.set_title(title)
     fig.tight_layout()
     fig.savefig(out_path, dpi=150)
