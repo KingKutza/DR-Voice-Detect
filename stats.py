@@ -1,5 +1,5 @@
 """
-stats.py — compute FAR/FRR/PAR and generate graphs and spectrograms.
+stats.py — compute FAR/FRR/TAR and generate graphs and spectrograms.
 
 Usage:
     python stats.py <speaker_name> --genuine <file1|dir1> [<file2|dir2> ...] --impostor <file1|dir1> [<file2|dir2> ...]
@@ -77,8 +77,8 @@ def compute_metrics(genuine_scores: list[float], impostor_scores: list[float], t
     fr = sum(s > threshold for s in genuine_scores)    # genuine too far from centroid
     far = fa / len(impostor_scores) if impostor_scores else 0.0
     frr = fr / len(genuine_scores) if genuine_scores else 0.0
-    par = (far + frr) / 2
-    return {"FAR": far, "FRR": frr, "PAR": par,
+    tar = 1.0 - frr
+    return {"FAR": far, "FRR": frr, "TAR": tar,
             "false_accepts": fa, "false_rejects": fr,
             "n_genuine": len(genuine_scores), "n_impostor": len(impostor_scores)}
 
@@ -100,8 +100,8 @@ def plot_score_distribution(genuine: list[float], impostor: list[float],
 
 
 def plot_far_frr_bar(metrics_raw: dict, metrics_den: dict | None, out_path: str) -> None:
-    labels = ["FAR", "FRR", "PAR"]
-    raw_vals = [metrics_raw["FAR"], metrics_raw["FRR"], metrics_raw["PAR"]]
+    labels = ["FAR", "FRR", "TAR"]
+    raw_vals = [metrics_raw["FAR"], metrics_raw["FRR"], metrics_raw["TAR"]]
 
     fig, ax = plt.subplots(figsize=(7, 4))
     x = np.arange(len(labels))
@@ -109,13 +109,13 @@ def plot_far_frr_bar(metrics_raw: dict, metrics_den: dict | None, out_path: str)
 
     ax.bar(x - (width / 2 if metrics_den else 0), raw_vals, width, label="Raw", color="steelblue")
     if metrics_den:
-        den_vals = [metrics_den["FAR"], metrics_den["FRR"], metrics_den["PAR"]]
+        den_vals = [metrics_den["FAR"], metrics_den["FRR"], metrics_den["TAR"]]
         ax.bar(x + width / 2, den_vals, width, label="Denoised", color="seagreen")
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.set_ylabel("Rate")
-    ax.set_title("FAR / FRR / PAR Comparison")
+    ax.set_title("FAR / FRR / TAR Comparison")
     ax.legend()
     fig.tight_layout()
     fig.savefig(out_path, dpi=150)
@@ -164,7 +164,7 @@ def run(args) -> None:
     print("\n=== Raw Samples ===")
     print(f"  FAR: {metrics_raw['FAR']:.2%}  ({metrics_raw['false_accepts']}/{metrics_raw['n_impostor']} impostors accepted)")
     print(f"  FRR: {metrics_raw['FRR']:.2%}  ({metrics_raw['false_rejects']}/{metrics_raw['n_genuine']} genuine rejected)")
-    print(f"  PAR: {metrics_raw['PAR']:.2%}")
+    print(f"  TAR: {metrics_raw['TAR']:.2%}")
 
     plot_score_distribution(raw_genuine, raw_impostor, args.threshold,
                             "Score Distribution — Raw",
@@ -180,7 +180,7 @@ def run(args) -> None:
         print("\n=== Denoised Samples ===")
         print(f"  FAR: {metrics_den['FAR']:.2%}  ({metrics_den['false_accepts']}/{metrics_den['n_impostor']} impostors accepted)")
         print(f"  FRR: {metrics_den['FRR']:.2%}  ({metrics_den['false_rejects']}/{metrics_den['n_genuine']} genuine rejected)")
-        print(f"  PAR: {metrics_den['PAR']:.2%}")
+        print(f"  TAR: {metrics_den['TAR']:.2%}")
 
         plot_score_distribution(den_genuine, den_impostor, args.threshold,
                                 "Score Distribution — Denoised",
