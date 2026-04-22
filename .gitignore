@@ -11,6 +11,17 @@ dist/
 build/
 
 # Data and output (not tracked)
-samples/
-profiles/
-results/
+samples/*
+profiles/*
+results/*
+
+
+# Final Data
+!profiles/Don_Final.json
+!profiles/Rhett_Final.json
+!samples/DR_Test_Set/
+!samples/DR_Test_Set/**
+!results/DR_Test_Set_Don/
+!results/DR_Test_Set_Don/*
+!results/DR_Test_Set_Rhett/
+!results/DR_Test_Set_Rhett/*
